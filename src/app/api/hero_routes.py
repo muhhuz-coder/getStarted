@@ -5,22 +5,22 @@ from ..db.database import get_session
 from ..utils.rate_limiter import limiter
 from sqlmodel import select
 
-router = APIRouter()
+hero_router = APIRouter()
 
-@router.post("/heroes/", response_model=Hero)
+@hero_router.post("/heroes/", response_model=Hero)
 def create_hero(hero: Hero, session=Depends(get_session)):
     session.add(hero)
     session.commit()
     session.refresh(hero)
     return hero
 
-@router.get("/heroes/", response_model=list[Hero])
+@hero_router.get("/heroes/", response_model=list[Hero])
 @limiter.limit("2/minute")
 def read_heroes(request: Request, session=Depends(get_session)):
     heroes = session.exec(select(Hero)).all()
     return heroes
 
-@router.get("/heroes/{hero_id}", response_model=Hero)
+@hero_router.get("/heroes/{hero_id}", response_model=Hero)
 def read_hero(hero_id: int, session=Depends(get_session)):
     hero = session.get(Hero, hero_id)
     if not hero:
