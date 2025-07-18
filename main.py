@@ -1,9 +1,15 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from sqlmodel import select
 from db import create_db_and_tables, get_session
 from models import Hero
 
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
+app.state.limiter = limiter    
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 @app.on_event("startup")
 def on_startup():
@@ -17,7 +23,8 @@ def create_hero(hero: Hero, session=Depends(get_session)):
     return hero
 
 @app.get("/heroes/", response_model=list[Hero])
-def read_heroes(session=Depends(get_session)):
+@limiter.limit("2/minute")
+def read_heroes(request:Request,session=Depends(get_session)):
     heroes = session.exec(select(Hero)).all()
     return heroes
 
